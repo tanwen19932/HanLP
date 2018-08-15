@@ -1,50 +1,22 @@
 package com.hankcs.hanlp.utility;
 
 
+import com.hankcs.hanlp.corpus.document.sentence.Sentence;
+import com.hankcs.hanlp.corpus.document.sentence.word.IWord;
+import com.hankcs.hanlp.corpus.document.sentence.word.Word;
+
 import java.io.*;
 import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+
+import static com.hankcs.hanlp.dictionary.other.CharType.*;
 
 /**
  * 文本工具类
  */
 public class TextUtility
 {
-
-    /**
-     * 单字节
-     */
-    public static final int CT_SINGLE = 5;// SINGLE byte
-
-    /**
-     * 分隔符"!,.?()[]{}+=
-     */
-    public static final int CT_DELIMITER = CT_SINGLE + 1;// delimiter
-
-    /**
-     * 中文字符
-     */
-    public static final int CT_CHINESE = CT_SINGLE + 2;// Chinese Char
-
-    /**
-     * 字母
-     */
-    public static final int CT_LETTER = CT_SINGLE + 3;// HanYu Pinyin
-
-    /**
-     * 数字
-     */
-    public static final int CT_NUM = CT_SINGLE + 4;// HanYu Pinyin
-
-    /**
-     * 序号
-     */
-    public static final int CT_INDEX = CT_SINGLE + 5;// HanYu Pinyin
-
-    /**
-     * 其他
-     */
-    public static final int CT_OTHER = CT_SINGLE + 12;// Other
-
     public static int charType(char c)
     {
         return charType(String.valueOf(c));
@@ -59,7 +31,7 @@ public class TextUtility
     {
         if (str != null && str.length() > 0)
         {
-            if ("零○〇一二两三四五六七八九十廿百千万亿壹贰叁肆伍陆柒捌玖拾佰仟".contains(str)) return CT_NUM;
+            if ("零○〇一二两三四五六七八九十廿百千万亿壹贰叁肆伍陆柒捌玖拾佰仟".contains(str)) return CT_CNUM;
             byte[] b;
             try
             {
@@ -76,6 +48,7 @@ public class TextUtility
             int ub2 = getUnsigned(b2);
             if (ub1 < 128)
             {
+                if (ub1 < 32) return CT_DELIMITER; // NON PRINTABLE CHARACTERS
                 if (' ' == b1) return CT_OTHER;
                 if ('\n' == b1) return CT_DELIMITER;
                 if ("*\"!,.?()[]{}+=/\\;:|".indexOf((char) b1) != -1)
@@ -139,33 +112,19 @@ public class TextUtility
      */
     public static boolean isAllSingleByte(String str)
     {
-        if (str != null)
+        assert str != null;
+        for (int i = 0; i < str.length(); i++)
         {
-            int len = str.length();
-            int i = 0;
-            byte[] b;
-            try
+            if (str.charAt(i) >128)
             {
-                b = str.getBytes("GBK");
-            }
-            catch (UnsupportedEncodingException e)
-            {
-                e.printStackTrace();
-                b = str.getBytes();
-            }
-            while (i < len && b[i] < 128)
-            {
-                i++;
-            }
-            if (i < len)
                 return false;
-            return true;
+            }
         }
-        return false;
+        return true;
     }
 
     /**
-     * 把表示数字含义的字符串转你成整形
+     * 把表示数字含义的字符串转成整形
      *
      * @param str 要转换的字符串
      * @return 如果是有意义的整数，则返回此整数值。否则，返回-1。
@@ -192,61 +151,56 @@ public class TextUtility
      */
     public static boolean isAllNum(String str)
     {
+        if (str == null)
+            return false;
 
-        if (str != null)
+        int i = 0;
+        /** 判断开头是否是+-之类的符号 */
+        if ("±+-＋－—".indexOf(str.charAt(0)) != -1)
+            i++;
+        /** 如果是全角的０１２３４５６７８９ 字符* */
+        while (i < str.length() && "０１２３４５６７８９".indexOf(str.charAt(i)) != -1)
+            i++;
+        // Get middle delimiter such as .
+        if (i > 0 && i < str.length())
         {
-            int i = 0;
-            String temp = str + " ";
-            // 判断开头是否是+-之类的符号
-            if ("±+—-＋".indexOf(temp.substring(0, 1)) != -1)
+            char ch = str.charAt(i);
+            if ("·∶:，,．.／/".indexOf(ch) != -1)
+            {// 98．1％
                 i++;
-            /** 如果是全角的０１２３４５６７８９ 字符* */
-            while (i < str.length() && "０１２３４５６７８９".indexOf(str.substring(i, i + 1)) != -1)
-                i++;
-
-            // Get middle delimiter such as .
-            if (i < str.length())
-            {
-                String s = str.substring(i, i + 1);
-                if ("∶·．／".indexOf(s) != -1 || ".".equals(s) || "/".equals(s))
-                {// 98．1％
+                while (i < str.length() && "０１２３４５６７８９".indexOf(str.charAt(i)) != -1)
                     i++;
-                    while (i + 1 < str.length() && "０１２３４５６７８９".indexOf(str.substring(i + 1, i + 2)) != -1)
-
-                        i++;
-                }
             }
-
-            if (i >= str.length())
-                return true;
-
-            while (i < str.length() && cint(str.substring(i, i + 1)) >= 0
-                    && cint(str.substring(i, i + 1)) <= 9)
-                i++;
-            // Get middle delimiter such as .
-            if (i < str.length())
-            {
-                String s = str.substring(i, i + 1);
-                if ("∶·．／".indexOf(s) != -1 || ".".equals(s) || "/".equals(s))
-                {// 98．1％
-                    i++;
-                    while (i + 1 < str.length() && "0123456789".indexOf(str.substring(i + 1, i + 2)) != -1)
-                        i++;
-                }
-            }
-
-            if (i < str.length())
-            {
-
-                if ("百千万亿佰仟％‰".indexOf(str.substring(i, i + 1)) == -1
-                        && !"%".equals(str.substring(i, i + 1)))
-                    i--;
-            }
-            if (i >= str.length())
-                return true;
         }
+        if (i >= str.length())
+            return true;
+
+        /** 如果是半角的0123456789字符* */
+        while (i < str.length() && "0123456789".indexOf(str.charAt(i)) != -1)
+            i++;
+        // Get middle delimiter such as .
+        if (i > 0 && i < str.length())
+        {
+            char ch = str.charAt(i);
+            if (',' == ch || '.' == ch || '/' == ch  || ':' == ch || "∶·，．／".indexOf(ch) != -1)
+            {// 98．1％
+                i++;
+                while (i < str.length() && "0123456789".indexOf(str.charAt(i)) != -1)
+                    i++;
+            }
+        }
+
+        if (i < str.length())
+        {
+            if ("百千万亿佰仟%％‰".indexOf(str.charAt(i)) != -1)
+                i++;
+        }
+        if (i >= str.length())
+            return true;
+
         return false;
     }
+
     /**
      * 是否全是序号
      * @param sString
@@ -346,28 +300,34 @@ public class TextUtility
     {// 百分之五点六的人早上八点十八分起床
 
         String chineseNum = "零○一二两三四五六七八九十廿百千万亿壹贰叁肆伍陆柒捌玖拾佰仟∶·．／点";//
-        String prefix = "几数第上成";
+        String prefix = "几数上第";
+        String surfix = "几多余来成倍";
+        boolean round = false;
 
-        if (word != null)
+        if (word == null)
+            return false;
+
+        char[] temp = word.toCharArray();
+        for (int i = 0; i < temp.length; i++)
         {
-            String temp = word + " ";
-            for (int i = 0; i < word.length(); i++)
+            if (word.startsWith("分之", i))// 百分之五
             {
-
-                if (temp.indexOf("分之", i) != -1)// 百分之五
-                {
-                    i += 2;
-                    continue;
-                }
-
-                String tchar = temp.substring(i, i + 1);
-                if (chineseNum.indexOf(tchar) == -1 && (i != 0 || prefix.indexOf(tchar) == -1))
-                    return false;
+                i += 1;
+                continue;
             }
-            return true;
+            char tchar = temp[i];
+            if (i == 0 && prefix.indexOf(tchar) != -1)
+            {
+                round = true;
+            }
+            else if (i == temp.length-1 && !round && surfix.indexOf(tchar) != -1)
+            {
+                round = true;
+            }
+            else if (chineseNum.indexOf(tchar) == -1)
+                return false;
         }
-
-        return false;
+        return true;
     }
 
 
@@ -428,7 +388,7 @@ public class TextUtility
             if (isAllSingleByte(snum)
                     && (len == 4 || len == 2 && (cint(first) > 4 || cint(first) == 0)))
                 return true;
-            if (isAllNum(snum) && (len >= 6 || len == 4 && "０５６７８９".indexOf(first) != -1))
+            if (isAllNum(snum) && (len >= 3 || len == 2 && "０５６７８９".indexOf(first) != -1))
                 return true;
             if (getCharCount("零○一二三四五六七八九壹贰叁肆伍陆柒捌玖", snum) == len && len >= 2)
                 return true;
@@ -706,6 +666,47 @@ public class TextUtility
         for (String str : stringCollection)
         {
             sb.append(str).append(delimiter);
+        }
+
+        return sb.toString();
+    }
+
+    public static String combine(String... termArray)
+    {
+        StringBuilder sbSentence = new StringBuilder();
+        for (String word : termArray)
+        {
+            sbSentence.append(word);
+        }
+        return sbSentence.toString();
+    }
+
+    public static String join(Iterable<? extends CharSequence> s, String delimiter)
+    {
+        Iterator<? extends CharSequence> iter = s.iterator();
+        if (!iter.hasNext()) return "";
+        StringBuilder buffer = new StringBuilder(iter.next());
+        while (iter.hasNext()) buffer.append(delimiter).append(iter.next());
+        return buffer.toString();
+    }
+
+    public static String combine(Sentence sentence)
+    {
+        StringBuilder sb = new StringBuilder(sentence.wordList.size() * 3);
+        for (IWord word : sentence.wordList)
+        {
+            sb.append(word.getValue());
+        }
+
+        return sb.toString();
+    }
+
+    public static String combine(List<Word> wordList)
+    {
+        StringBuilder sb = new StringBuilder(wordList.size() * 3);
+        for (IWord word : wordList)
+        {
+            sb.append(word.getValue());
         }
 
         return sb.toString();

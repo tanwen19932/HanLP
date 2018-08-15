@@ -41,8 +41,7 @@ public class CoreDictionary
         long start = System.currentTimeMillis();
         if (!load(path))
         {
-            System.err.printf("核心词典%s加载失败\n", path);
-            System.exit(-1);
+            throw new IllegalArgumentException("核心词典" + path + "加载失败");
         }
         else
         {
@@ -78,7 +77,7 @@ public class CoreDictionary
                 CoreDictionary.Attribute attribute = new CoreDictionary.Attribute(natureCount);
                 for (int i = 0; i < natureCount; ++i)
                 {
-                    attribute.nature[i] = Enum.valueOf(Nature.class, param[1 + 2 * i]);
+                    attribute.nature[i] = Nature.create(param[1 + 2 * i]);
                     attribute.frequency[i] = Integer.parseInt(param[2 + 2 * i]);
                     attribute.totalFrequency += attribute.frequency[i];
                 }
@@ -274,7 +273,7 @@ public class CoreDictionary
                 Attribute attribute = new Attribute(natureCount);
                 for (int i = 0; i < natureCount; ++i)
                 {
-                    attribute.nature[i] = LexiconUtility.convertStringToNature(param[2 * i], null);
+                    attribute.nature[i] = Nature.create(param[2 * i]);
                     attribute.frequency[i] = Integer.parseInt(param[1 + 2 * i]);
                     attribute.totalFrequency += attribute.frequency[i];
                 }
@@ -319,7 +318,7 @@ public class CoreDictionary
         {
             try
             {
-                Nature pos = Enum.valueOf(Nature.class, nature);
+                Nature pos = Nature.create(nature);
                 return getNatureFrequency(pos);
             }
             catch (IllegalArgumentException e)
@@ -356,6 +355,20 @@ public class CoreDictionary
         public boolean hasNature(Nature nature)
         {
             return getNatureFrequency(nature) > 0;
+        }
+
+        /**
+         * 是否有以某个前缀开头的词性
+         * @param prefix 词性前缀，比如u会查询是否有ude, uzhe等等
+         * @return
+         */
+        public boolean hasNatureStartsWith(String prefix)
+        {
+            for (Nature n : nature)
+            {
+                if (n.startsWith(prefix)) return true;
+            }
+            return false;
         }
 
         @Override

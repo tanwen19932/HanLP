@@ -12,12 +12,11 @@
 package com.hankcs.hanlp.dictionary;
 
 import com.hankcs.hanlp.HanLP;
-import com.hankcs.hanlp.algoritm.EditDistance;
+import com.hankcs.hanlp.algorithm.EditDistance;
 import com.hankcs.hanlp.corpus.io.IOUtil;
 import com.hankcs.hanlp.dictionary.common.CommonSynonymDictionary;
 import com.hankcs.hanlp.seg.common.Term;
 
-import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import static com.hankcs.hanlp.utility.Predefine.logger;
@@ -40,11 +39,16 @@ public class CoreSynonymDictionary
         }
         catch (Exception e)
         {
-            System.err.println("载入核心同义词词典失败" + e);
-            System.exit(-1);
+            throw new IllegalArgumentException("载入核心同义词词典失败" + e);
         }
     }
 
+    /**
+     * 获取一个词的同义词（意义完全相同的，即{@link com.hankcs.hanlp.dictionary.common.CommonSynonymDictionary.SynonymItem#type}
+     * == {@link com.hankcs.hanlp.corpus.synonym.Synonym.Type#EQUAL}的）列表
+     * @param key
+     * @return
+     */
     public static CommonSynonymDictionary.SynonymItem get(String key)
     {
         return dictionary.get(key);
